@@ -6,8 +6,9 @@
 <meta name="theme-color" content="#16213e">
 <meta name="description" content="Tic Tac Toe — challenge a friend or take on the AI. Installable, works offline.">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -202,6 +203,10 @@ body.light kbd{background:rgba(0,0,0,.08)}
 @media(-webkit-min-device-pixel-ratio:2),(min-resolution:192dpi){
   .cell.x,.cell.o{text-shadow:0 0 12px currentColor}
 }
+/* Game logo */
+.logo{display:block;width:clamp(56px,15vw,84px);height:auto;margin:0 auto .4rem;filter:drop-shadow(0 6px 18px rgba(79,172,254,.35));animation:logoFloat 5s ease-in-out infinite}
+@keyframes logoFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){.logo{animation:none!important}}
 </style>
 </head>
 <body>
@@ -209,6 +214,27 @@ body.light kbd{background:rgba(0,0,0,.08)}
 <div class="blob blob1"></div><div class="blob blob2"></div><div class="blob blob3"></div>
 <div class="container">
   <div class="game-section">
+    <svg class="logo" viewBox="0 0 512 512" role="img" aria-label="Tic Tac Toe logo">
+      <defs>
+        <linearGradient id="logoBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#1a1a2e"/><stop offset=".55" stop-color="#16213e"/><stop offset="1" stop-color="#0f3460"/>
+        </linearGradient>
+        <linearGradient id="logoX" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#4facfe"/><stop offset="1" stop-color="#a855f7"/>
+        </linearGradient>
+      </defs>
+      <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#logoBg)"/>
+      <rect x="8" y="8" width="496" height="496" rx="112" fill="none" stroke="#ffffff" stroke-opacity=".12" stroke-width="6"/>
+      <g stroke="#ffffff" stroke-opacity=".35" stroke-width="22" stroke-linecap="round">
+        <line x1="197" y1="70" x2="197" y2="442"/><line x1="315" y1="70" x2="315" y2="442"/>
+        <line x1="70" y1="197" x2="442" y2="197"/><line x1="70" y1="315" x2="442" y2="315"/>
+      </g>
+      <g stroke="url(#logoX)" stroke-width="36" stroke-linecap="round">
+        <line x1="102" y1="102" x2="166" y2="166"/><line x1="166" y1="102" x2="102" y2="166"/>
+      </g>
+      <circle cx="256" cy="256" r="54" fill="none" stroke="#ff6b6b" stroke-width="36"/>
+      <circle cx="378" cy="378" r="30" fill="none" stroke="#ff6b6b" stroke-opacity=".55" stroke-width="26"/>
+    </svg>
     <h1>Tic Tac Toe</h1>
     <p class="subtitle">Challenge a friend or take on the AI 🤖</p>
     <div class="card">

@@ -1,10 +1,13 @@
 /* Tic Tac Toe — offline service worker */
-const CACHE = 'ttt-v2';
+const CACHE = 'ttt-v3';
 const ASSETS = [
   './tic-tac-toe.html',
   './manifest.webmanifest',
+  './icons/icon.svg',
+  './icons/icon-180.png',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (e) => {
