@@ -365,25 +365,36 @@ function load(){try{
 }catch(e){}}
 // ---------- sound (WebAudio, no assets) ----------
 let AC=null;
+function ensureAudio(){
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended')AC.resume().catch(()=>{});
+  }catch(e){}
+  return AC;
+}
+// Unlock audio on first user gesture (autoplay policy blocks sound otherwise)
+['pointerdown','keydown','touchend'].forEach(ev=>
+  window.addEventListener(ev,ensureAudio,{once:true,passive:true}));
 function beep(freq,dur,type,vol,when){
   if(!soundOn) return;
   try{
-    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    ensureAudio();
     const o=AC.createOscillator(),g=AC.createGain();
     o.type=type||'sine'; o.frequency.value=freq;
-    g.gain.setValueAtTime(vol||.12,AC.currentTime+(when||0));
-    g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+(when||0)+dur);
+    const t=AC.currentTime+(when||0);
+    g.gain.setValueAtTime(vol||.12,t);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
     o.connect(g); g.connect(AC.destination);
-    o.start(AC.currentTime+(when||0)); o.stop(AC.currentTime+(when||0)+dur+.02);
+    o.start(t); o.stop(t+dur+.02);
   }catch(e){}
 }
 const sfx={
-  move(){beep(520,.09,'sine',.1)},
-  ai(){beep(340,.12,'triangle',.1)},
-  win(){[523,659,784,1046].forEach((f,i)=>beep(f,.18,'sine',.12,i*.11))},
-  lose(){[400,340,280,200].forEach((f,i)=>beep(f,.2,'sawtooth',.06,i*.12))},
-  draw(){beep(440,.2,'sine',.1);beep(440,.2,'sine',.1,.22)},
-  click(){beep(700,.05,'square',.04)}
+  move(){beep(520,.1,'sine',.14)},
+  ai(){beep(340,.12,'triangle',.14)},
+  win(){[523,659,784,1046].forEach((f,i)=>beep(f,.2,'sine',.16,i*.11))},
+  lose(){[400,340,280,200].forEach((f,i)=>beep(f,.2,'sawtooth',.07,i*.12))},
+  draw(){beep(440,.2,'sine',.14);beep(440,.2,'sine',.14,.22)},
+  click(){beep(700,.05,'square',.05)}
 };
 // ---------- confetti ----------
 const cvs=$('confetti'),ctx=cvs.getContext('2d');let parts=[],confettiRunning=false;
@@ -538,8 +549,7 @@ function handleCell(i){
   if(!gameActive||board[i]||aiThinking)return;
   if(mode==='ai'&&currentPlayer!==human)return;
   placeMove(i,currentPlayer);
-  currentPlayer===human&&mode==='ai'?sfx.move():(mode==='pvp'?sfx.move():null);
-  if(mode==='ai'&&currentPlayer===human)sfx.move();
+  sfx.move();
   checkResult();
 }
 function triggerAi(){
