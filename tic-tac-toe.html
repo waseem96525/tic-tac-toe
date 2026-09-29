@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#16213e">
+<meta name="description" content="Tic Tac Toe — challenge a friend or take on the AI. Installable, works offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TicTacToe">
+<title>Tic Tac Toe — Play vs Friend or AI</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+img,canvas,svg{max-width:100%}
+:root{
+  --x:#4facfe; --o:#ff6b6b; --gold:#ffd700; --bg1:#1a1a2e; --bg2:#16213e; --bg3:#0f3460;
+  --card:rgba(255,255,255,.05); --border:rgba(255,255,255,.1);
+  --board-max:340px; --radius:20px; --tap:44px;
+  color-scheme:dark;
+}
+body.light{color-scheme:light}
+*{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+body.light{
+  --card:rgba(255,255,255,.75); --border:rgba(0,0,0,.08);
+}
+body{
+  background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  color:#fff;min-height:100vh;min-height:100dvh;display:flex;justify-content:center;align-items:flex-start;
+  padding:clamp(12px,3vw,24px) clamp(10px,3vw,16px) calc(60px + env(safe-area-inset-bottom,0px));overflow-x:hidden;transition:background .4s,color .4s;
+  padding-top:calc(clamp(12px,3vw,24px) + env(safe-area-inset-top,0px));
+  touch-action:manipulation;
+}
+body.light{background:linear-gradient(135deg,#e0f2fe,#f5f3ff,#ffe4e6);color:#1e293b}
+.blob{position:fixed;border-radius:50%;filter:blur(80px);opacity:.4;z-index:0;animation:float 8s ease-in-out infinite;pointer-events:none;will-change:transform}
+.blob1{top:-5%;left:-5%;width:min(350px,70vw);height:min(350px,70vw);background:#4facfe}
+.blob2{bottom:-10%;right:-5%;width:min(400px,80vw);height:min(400px,80vw);background:#ff6b6b;animation-delay:3s}
+.blob3{top:50%;left:50%;width:min(300px,60vw);height:min(300px,60vw);background:#a855f7;animation-delay:5s}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-30px) scale(1.05)}66%{transform:translate(-20px,20px) scale(.95)}}
+@media(prefers-reduced-motion:reduce){.blob,.cell.x,.cell.o,.cell.winner,.spinner{animation:none!important;transition:none!important}}
+.container{position:relative;z-index:10;display:grid;grid-template-columns:minmax(0,430px) minmax(0,320px);gap:clamp(1rem,3vw,1.5rem);align-items:start;max-width:800px;width:100%;justify-content:center;margin:0 auto}
+.game-section{text-align:center;min-width:0;width:100%;max-width:430px;margin:0 auto}
+.side-panel{display:flex;flex-direction:column;gap:1rem;min-width:0;width:100%;max-width:340px;margin:0 auto}
+h1{margin-bottom:.25rem;font-size:clamp(1.7rem,5.5vw + .5rem,2.6rem);line-height:1.1;background:linear-gradient(to right,#4facfe,#a855f7,#ff6b6b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;overflow-wrap:anywhere}
+.subtitle{color:rgba(255,255,255,.5);margin-bottom:1rem;font-size:.9rem}
+body.light .subtitle{color:#64748b}
+.card{background:var(--card);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:clamp(14px,3.5vw,20px);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.3);border:1px solid var(--border);min-width:0}
+body.light .card{box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.mode-tabs{display:flex;background:rgba(255,255,255,.07);border-radius:14px;padding:5px;gap:5px;margin-bottom:1rem}
+body.light .mode-tabs{background:rgba(0,0,0,.06)}
+.mode-tabs button{flex:1;padding:10px 8px;border:none;border-radius:10px;background:transparent;color:inherit;font-weight:700;cursor:pointer;font-size:.92rem;transition:all .25s;opacity:.6}
+.mode-tabs button.active{background:linear-gradient(135deg,#4facfe,#a855f7);color:#fff;opacity:1;box-shadow:0 4px 15px rgba(79,172,254,.35)}
+.settings-row{display:flex;flex-direction:column;gap:.7rem;text-align:left;margin-bottom:.5rem}
+.settings-row label{font-size:.75rem;text-transform:uppercase;letter-spacing:1px;opacity:.55;font-weight:700}
+.seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.seg button{width:100%;min-height:var(--tap);padding:8px 4px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.06);color:inherit;cursor:pointer;font-weight:600;font-size:clamp(.74rem,2.6vw,.85rem);transition:all .2s;white-space:normal;line-height:1.25;overflow-wrap:anywhere}
+body.light .seg button{background:#fff}
+.seg button.active{background:linear-gradient(135deg,#4facfe,#a855f7);color:#fff;border-color:transparent;box-shadow:0 3px 12px rgba(79,172,254,.4)}
+.seg button:hover:not(.active){background:rgba(255,255,255,.14)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;font-size:.9rem;gap:10px}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:rgba(255,255,255,.2);border-radius:24px;cursor:pointer;transition:.3s}
+.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s}
+.switch input:checked + .slider{background:linear-gradient(135deg,#4facfe,#a855f7)}
+.switch input:checked + .slider:before{transform:translateX(20px)}
+.status{font-size:clamp(1rem,3.8vw,1.25rem);margin:.9rem 0;min-height:2.2em;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.status .x-color{color:var(--x)} .status .o-color{color:var(--o)}
+.thinking{display:inline-flex;align-items:center;gap:8px}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.board-wrapper{padding:clamp(10px,3vw,20px);width:100%}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:clamp(6px,1.8vw,10px);justify-content:center;width:min(100%,var(--board-max));aspect-ratio:1/1;margin:0 auto;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.cell{width:100%;aspect-ratio:1/1;min-height:0;background:rgba(255,255,255,.05);border:none;border-radius:clamp(8px,2.5vw,12px);font-size:clamp(2rem,11vw,3rem);font-weight:bold;cursor:pointer;transition:transform .2s,background .2s;display:flex;justify-content:center;align-items:center;position:relative;overflow:hidden;color:#fff;touch-action:manipulation;line-height:1}
+body.light .cell{background:#fff;color:#1e293b;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.cell::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(255,255,255,.1),transparent);opacity:0;transition:opacity .3s}
+.cell:hover:not(.filled):not(:disabled){background:rgba(255,255,255,.12);transform:scale(1.05)}
+.cell:hover:not(.filled):not(:disabled)::before{opacity:1}
+.cell.ghost-x::after{content:'X';color:rgba(79,172,254,.35);font-size:inherit}
+.cell.ghost-o::after{content:'O';color:rgba(255,107,107,.35);font-size:inherit}
+.cell.x{color:var(--x);text-shadow:0 0 15px rgba(79,172,254,.5);animation:popIn .3s ease-out}
+.cell.o{color:var(--o);text-shadow:0 0 15px rgba(255,107,107,.5);animation:popIn .3s ease-out}
+.cell.winner{animation:winPulse 1s infinite alternate;box-shadow:0 0 25px rgba(255,215,0,.6);background:rgba(255,215,0,.15);border:2px solid rgba(255,215,0,.5)}
+.cell.hint-pulse{animation:hintPulse .7s ease-in-out 3;border:2px solid #22c55e !important}
+@keyframes popIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+@keyframes winPulse{from{transform:scale(1)}to{transform:scale(1.08)}}
+@keyframes hintPulse{0%,100%{box-shadow:0 0 0 rgba(34,197,94,0)}50%{box-shadow:0 0 22px rgba(34,197,94,.9)}}
+.controls{margin-top:1rem;display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px;justify-content:center}
+.controls button,.icon-btn{min-height:var(--tap);padding:12px 10px;border:none;border-radius:25px;font-size:clamp(.82rem,3vw,.95rem);font-weight:600;cursor:pointer;transition:all .3s;width:100%}
+.btn-primary{background:linear-gradient(135deg,#4facfe,#a855f7);color:#fff;box-shadow:0 4px 15px rgba(79,172,254,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(79,172,254,.5)}
+.btn-secondary{background:rgba(255,255,255,.1);color:inherit;border:1px solid var(--border)!important}
+.btn-secondary:hover{background:rgba(255,255,255,.2);transform:translateY(-2px)}
+.btn-small{min-height:40px;padding:8px 10px !important;font-size:clamp(.74rem,2.8vw,.82rem) !important}
+.toolbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;justify-content:center;margin-top:.7rem}
+.install-btn{display:none;width:100%;margin-top:.7rem;min-height:var(--tap);padding:12px;border:none;border-radius:25px;font-size:clamp(.85rem,3.2vw,.95rem);font-weight:700;cursor:pointer;background:linear-gradient(135deg,#22c55e,#4facfe);color:#fff;box-shadow:0 4px 15px rgba(34,197,94,.35);transition:all .3s}
+.install-btn.show{display:block;animation:popIn .3s ease-out}
+.install-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(34,197,94,.5)}
+.install-btn.installed{background:rgba(255,255,255,.1);box-shadow:none;cursor:default}
+.install-btn.installed:hover{transform:none}
+/* Install help modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-backdrop.show{display:flex}
+.modal{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid var(--border);border-radius:20px;padding:24px;max-width:360px;width:100%;box-shadow:0 12px 48px rgba(0,0,0,.5);animation:popIn .3s ease-out}
+body.light .modal{background:#fff;color:#1e293b}
+.modal h3{font-size:1.1rem;margin-bottom:12px}
+.modal ol{margin:0 0 12px 20px;font-size:.88rem;line-height:1.7;opacity:.85}
+.modal .modal-close{width:100%;min-height:var(--tap);border:none;border-radius:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#4facfe,#a855f7);color:#fff;font-size:.9rem}
+.diag{margin:0 0 12px;font-size:.78rem;opacity:.8}
+.diag summary{cursor:pointer;font-weight:700;margin-bottom:6px}
+.diag ul{margin-left:18px;line-height:1.7}
+.diag .ok{color:#22c55e} .diag .bad{color:#ff6b6b}
+.scoreboard h2{text-align:center;margin-bottom:14px;font-size:1.2rem;opacity:.85}
+.score-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border-radius:10px;transition:all .3s;font-size:1.05rem}
+.score-item.active{background:rgba(255,255,255,.1);transform:scale(1.02);box-shadow:0 2px 10px rgba(0,0,0,.2)}
+body.light .score-item.active{background:rgba(79,172,254,.12)}
+.score-item .label{display:flex;align-items:center;gap:8px}
+.score-item .marker{font-size:1.3rem;font-weight:bold}
+.marker.x-marker{color:var(--x)} .marker.o-marker{color:var(--o)}
+.score-item .value{font-size:1.5rem;font-weight:bold}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+.stat{background:rgba(255,255,255,.06);border-radius:10px;padding:8px 4px;text-align:center}
+body.light .stat{background:rgba(0,0,0,.05)}
+.stat .num{font-weight:800;font-size:1.1rem}
+.stat .lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;opacity:.55}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.history-title{font-size:.8rem;text-transform:uppercase;letter-spacing:1px;opacity:.5;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.history-title button{background:none;border:none;color:inherit;opacity:.6;cursor:pointer;font-size:.75rem;text-decoration:underline}
+.history{max-height:170px;overflow-y:auto;padding-right:5px}
+.history::-webkit-scrollbar{width:4px}
+.history::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+.history-entry{padding:6px 10px;font-size:.83rem;opacity:.75;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.history-entry:last-child{border-bottom:none}
+.round-num{opacity:.5;font-size:.72rem;min-width:24px}
+.no-history{opacity:.4;font-size:.85rem;text-align:center;padding:10px}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+.meta{font-size:clamp(.7rem,2.8vw,.78rem);opacity:.5;margin-top:.6rem;line-height:1.6;overflow-wrap:anywhere}
+kbd{background:rgba(255,255,255,.12);padding:1px 6px;border-radius:5px;font-size:.75rem;white-space:nowrap}
+body.light kbd{background:rgba(0,0,0,.08)}
+/* ============ RESPONSIVE SYSTEM ============ */
+/* Large tablets / small laptops: stack panels */
+@media(max-width:900px){
+  .container{grid-template-columns:minmax(0,480px);justify-items:center}
+  .game-section{max-width:480px}
+  .side-panel{max-width:480px}
+  :root{--board-max:360px}
+}
+/* Phones */
+@media(max-width:560px){
+  :root{--board-max:min(84vw,340px)}
+  .seg{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .controls{grid-template-columns:1fr 1fr}
+  .controls .btn-primary{grid-column:1/-1;order:-1}
+  .mode-tabs button{padding:12px 6px;min-height:var(--tap);font-size:clamp(.8rem,3.4vw,.92rem)}
+  .toggle-row{font-size:clamp(.8rem,3.4vw,.9rem)}
+  .stat-grid{gap:6px}
+}
+/* Very small phones (320px class: iPhone SE, Galaxy Fold) */
+@media(max-width:380px){
+  body{padding-left:8px;padding-right:8px}
+  :root{--board-max:min(88vw,300px);--radius:16px}
+  .card{border-radius:16px}
+  .meta kbd{display:inline-block;margin:1px 0}
+  .score-item{font-size:.95rem;padding:8px 10px}
+}
+/* Tiny screens */
+@media(max-width:320px){
+  :root{--board-max:92vw}
+  .seg{grid-template-columns:1fr 1fr}
+}
+/* Short landscape phones (height-constrained): side-by-side, compact */
+@media(max-height:500px) and (orientation:landscape){
+  body{align-items:center;padding:10px}
+  .container{grid-template-columns:minmax(0,1fr) minmax(0,300px);max-width:760px;gap:.8rem}
+  h1{font-size:1.4rem}
+  .subtitle{display:none}
+  :root{--board-max:min(46vh,260px)}
+  .status{margin:.4rem 0;font-size:.95rem;min-height:1.6em}
+  .controls{grid-template-columns:1fr 1fr 1fr;margin-top:.6rem}
+  .history{max-height:90px}
+  .meta{display:none}
+}
+/* Tablets portrait: roomier board */
+@media(min-width:561px) and (max-width:900px){
+  :root{--board-max:380px}
+}
+/* Desktop large: cap + center */
+@media(min-width:1200px){
+  .container{max-width:860px}
+}
+/* Touch devices: disable hover lift to avoid sticky states */
+@media(hover:none){
+  .cell:hover:not(.filled):not(:disabled){transform:none;background:rgba(255,255,255,.05)}
+  .btn-primary:hover,.btn-secondary:hover{transform:none}
+}
+/* High-DPI crispness */
+@media(-webkit-min-device-pixel-ratio:2),(min-resolution:192dpi){
+  .cell.x,.cell.o{text-shadow:0 0 12px currentColor}
+}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="blob blob1"></div><div class="blob blob2"></div><div class="blob blob3"></div>
+<div class="container">
+  <div class="game-section">
+    <h1>Tic Tac Toe</h1>
+    <p class="subtitle">Challenge a friend or take on the AI 🤖</p>
+    <div class="card">
+      <div class="mode-tabs" role="tablist">
+        <button id="pvpTab" class="active">🧑‍🤝‍🧑 2 Players</button>
+        <button id="aiTab">🤖 Play vs AI</button>
+      </div>
+      <div id="aiSettings" class="settings-row" style="display:none">
+        <div><label>Difficulty</label>
+          <div class="seg" id="diffSeg">
+            <button data-diff="easy">😌 Easy</button>
+            <button data-diff="medium">🙂 Medium</button>
+            <button data-diff="hard" class="active">🔥 Hard</button>
+            <button data-diff="unbeatable">👑 Unbeatable</button>
+          </div>
+        </div>
+        <div><label>Play as</label>
+          <div class="seg" id="sideSeg">
+            <button data-side="X" class="active">✕ X (first)</button>
+            <button data-side="O">○ O (second)</button>
+          </div>
+        </div>
+        <div class="toggle-row"><span>🔀 Alternate starter each round</span>
+          <label class="switch"><input type="checkbox" id="altToggle" checked><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+    <div class="status" id="status">Player <span class="x-color">X</span>'s Turn</div>
+    <div class="card board-wrapper">
+      <div class="board" id="board" role="grid" aria-label="Tic tac toe board">
+        <button class="cell" data-index="0" role="gridcell" aria-label="Cell 1"></button>
+        <button class="cell" data-index="1" role="gridcell" aria-label="Cell 2"></button>
+        <button class="cell" data-index="2" role="gridcell" aria-label="Cell 3"></button>
+        <button class="cell" data-index="3" role="gridcell" aria-label="Cell 4"></button>
+        <button class="cell" data-index="4" role="gridcell" aria-label="Cell 5"></button>
+        <button class="cell" data-index="5" role="gridcell" aria-label="Cell 6"></button>
+        <button class="cell" data-index="6" role="gridcell" aria-label="Cell 7"></button>
+        <button class="cell" data-index="7" role="gridcell" aria-label="Cell 8"></button>
+        <button class="cell" data-index="8" role="gridcell" aria-label="Cell 9"></button>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn-primary" id="newGameBtn">▶ New Round</button>
+      <button class="btn-secondary" id="undoBtn" title="Undo last move (U)">↩ Undo</button>
+      <button class="btn-secondary" id="hintBtn" title="Show best move (H)">💡 Hint</button>
+    </div>
+    <div class="toolbar">
+      <button class="btn-secondary btn-small" id="resetAllBtn">🗑 Reset All</button>
+      <button class="btn-secondary btn-small" id="soundBtn">🔊 Sound: On</button>
+      <button class="btn-secondary btn-small" id="themeBtn">🌙 Theme</button>
+      <button class="btn-secondary btn-small" id="installBtnToolbar" hidden>⬇ Install</button>
+    </div>
+    <button class="install-btn" id="installBtn">⬇ Install App</button>
+    <div class="modal-backdrop" id="installHelp">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="installHelpTitle">
+        <h3 id="installHelpTitle">📲 Install Tic Tac Toe</h3>
+        <ol id="installSteps">
+          <li>Open this page in your browser.</li>
+          <li>Use the browser menu → <b>Add to Home Screen</b>.</li>
+        </ol>
+        <details class="diag" id="installDiag">
+          <summary>Why am I seeing this? (tap for diagnostics)</summary>
+          <ul id="installDiagList"><li>Checking…</li></ul>
+        </details>
+        <button class="modal-close" id="installHelpClose">Got it</button>
+      </div>
+    </div>
+    <p class="meta">Shortcuts: <kbd>1</kbd>–<kbd>9</kbd> play &nbsp;•&nbsp; <kbd>U</kbd> undo &nbsp;•&nbsp; <kbd>H</kbd> hint &nbsp;•&nbsp; <kbd>N</kbd> new round</p>
+  </div>
+  <div class="side-panel">
+    <div class="card scoreboard">
+      <h2>📊 Scoreboard</h2>
+      <div class="score-item active" id="xScoreItem">
+        <span class="label"><span class="marker x-marker">✕</span> <span id="xLabel">Player X</span></span>
+        <span class="value" id="xScore">0</span>
+      </div>
+      <div class="score-item" id="oScoreItem">
+        <span class="label"><span class="marker o-marker">○</span> <span id="oLabel">Player O</span></span>
+        <span class="value" id="oScore">0</span>
+      </div>
+      <div class="score-item" id="drawScoreItem">
+        <span class="label"><span class="marker">⚡</span> Draws</span>
+        <span class="value" id="drawScore">0</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="num" id="roundNum">1</div><div class="lbl">Round</div></div>
+        <div class="stat"><div class="num" id="streakNum">0</div><div class="lbl" id="streakLbl">Streak</div></div>
+        <div class="stat"><div class="num" id="winRate">–</div><div class="lbl">X Win%</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="history-title"><span>Game History</span><button id="clearHistory">clear</button></div>
+      <div class="history" id="historyLog"><p class="no-history">No games played yet.</p></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:1rem;margin-bottom:10px">🤖 How the AI works</h2>
+      <p style="font-size:.83rem;opacity:.7;line-height:1.5" id="aiDesc">Hard uses the minimax algorithm with alpha-beta pruning — it never misses a win or block. Unbeatable adds slight randomization between equally-good moves so it's less predictable but still perfect. Try Medium for a fair fight!</p>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+// ---------- state ----------
+let mode='pvp', difficulty='hard', human='X', ai='O';
+let board=['','','','','','','','',''];
+let currentPlayer='X', gameActive=true, roundStarter='X';
+let scores={X:0,O:0,Draws:0}, roundCount=0, streak={who:null,n:0};
+let moveStack=[], soundOn=true, alternateStarter=true, aiThinking=false;
+// ---------- dom ----------
+const $=id=>document.getElementById(id);
+const cells=[...document.querySelectorAll('.cell')];
+const statusEl=$('status'), boardEl=$('board');
+const xScoreEl=$('xScore'), oScoreEl=$('oScore'), drawScoreEl=$('drawScore');
+const historyLog=$('historyLog'), xScoreItem=$('xScoreItem'), oScoreItem=$('oScoreItem');
+const xLabel=$('xLabel'), oLabel=$('oLabel');
+const roundNumEl=$('roundNum'), streakNumEl=$('streakNum'), streakLbl=$('streakLbl'), winRateEl=$('winRate');
+// ---------- persistence ----------
+function save(){try{
+  localStorage.setItem('ttt_v2',JSON.stringify({scores,roundCount,streak,mode,difficulty,human,soundOn,alternateStarter,history:historyLog.innerHTML}));
+}catch(e){}}
+function load(){try{
+  const s=JSON.parse(localStorage.getItem('ttt_v2')||'null'); if(!s) return;
+  scores=s.scores||scores; roundCount=s.roundCount||0; streak=s.streak||streak;
+  mode=s.mode||'pvp'; difficulty=s.difficulty||'hard'; human=s.human||'X'; ai=human==='X'?'O':'X';
+  soundOn=s.soundOn!==false; alternateStarter=s.alternateStarter!==false;
+  if(s.history && s.history.indexOf('no-history')===-1) historyLog.innerHTML=s.history;
+}catch(e){}}
+// ---------- sound (WebAudio, no assets) ----------
+let AC=null;
+function beep(freq,dur,type,vol,when){
+  if(!soundOn) return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||.12,AC.currentTime+(when||0));
+    g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+(when||0)+dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(AC.currentTime+(when||0)); o.stop(AC.currentTime+(when||0)+dur+.02);
+  }catch(e){}
+}
+const sfx={
+  move(){beep(520,.09,'sine',.1)},
+  ai(){beep(340,.12,'triangle',.1)},
+  win(){[523,659,784,1046].forEach((f,i)=>beep(f,.18,'sine',.12,i*.11))},
+  lose(){[400,340,280,200].forEach((f,i)=>beep(f,.2,'sawtooth',.06,i*.12))},
+  draw(){beep(440,.2,'sine',.1);beep(440,.2,'sine',.1,.22)},
+  click(){beep(700,.05,'square',.04)}
+};
+// ---------- confetti ----------
+const cvs=$('confetti'),ctx=cvs.getContext('2d');let parts=[],confettiRunning=false;
+function resize(){cvs.width=innerWidth;cvs.height=innerHeight}addEventListener('resize',resize);resize();
+function launchConfetti(n){
+  const colors=['#4facfe','#ff6b6b','#ffd700','#a855f7','#22c55e','#fff'];
+  for(let i=0;i<(n||120);i++)parts.push({x:Math.random()*cvs.width,y:-20-Math.random()*100,w:6+Math.random()*6,h:8+Math.random()*8,c:colors[i%colors.length],vy:2+Math.random()*3,vx:-1.5+Math.random()*3,r:Math.random()*Math.PI,vr:-.1+Math.random()*.2});
+  if(!confettiRunning){confettiRunning=true;requestAnimationFrame(tick)}
+}
+function tick(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore()});
+  parts=parts.filter(p=>p.y<cvs.height+30);
+  if(parts.length)requestAnimationFrame(tick);else{confettiRunning=false;ctx.clearRect(0,0,cvs.width,cvs.height)}
+}
+// ---------- AI: minimax with alpha-beta ----------
+function winnerOf(b){
+  for(const [a,c,d] of WINS)if(b[a]&&b[a]===b[c]&&b[a]===b[d])return b[a];
+  return b.includes('')?null:'D';
+}
+function emptyIdx(b){const r=[];for(let i=0;i<9;i++)if(!b[i])r.push(i);return r}
+// move ordering: center > corners > edges (faster pruning + smarter play)
+function orderedMoves(b){
+  const pref=[4,0,2,6,8,1,3,5,7];
+  return pref.filter(i=>!b[i]);
+}
+function minimax(b,turn,maximizer,depth,alpha,beta){
+  const w=winnerOf(b);
+  if(w===maximizer)return 10-depth;
+  if(w==='D')return 0;
+  if(w)return depth-10;
+  const isMax=turn===maximizer;
+  let best=isMax?-Infinity:Infinity;
+  for(const i of orderedMoves(b)){
+    b[i]=turn;
+    const s=minimax(b,turn==='X'?'O':'X',maximizer,depth+1,alpha,beta);
+    b[i]='';
+    if(isMax){best=Math.max(best,s);alpha=Math.max(alpha,best)}else{best=Math.min(best,s);beta=Math.min(beta,best)}
+    if(beta<=alpha)break;
+  }
+  return best;
+}
+function bestMove(b,symbol){
+  let best=-Infinity,moves=[];
+  for(const i of orderedMoves(b)){
+    b[i]=symbol;
+    const s=minimax(b,symbol==='X'?'O':'X',symbol,0,-Infinity,Infinity);
+    b[i]='';
+    if(s>best){best=s;moves=[i]}else if(s===best){moves.push(i)}
+  }
+  return moves[Math.floor(Math.random()*moves.length)];
+}
+function findWinOrBlock(b,symbol){
+  // win
+  for(const [a,c,d] of WINS){
+    const line=[b[a],b[c],b[d]];
+    if(line.filter(v=>v===symbol).length===2&&line.includes('')){
+      const idx=[a,c,d].find(i=>!b[i]);return idx;
+    }
+  }
+  // block opponent
+  const opp=symbol==='X'?'O':'X';
+  for(const [a,c,d] of WINS){
+    const line=[b[a],b[c],b[d]];
+    if(line.filter(v=>v===opp).length===2&&line.includes('')){
+      return [a,c,d].find(i=>!b[i]);
+    }
+  }
+  return null;
+}
+function pickAiMove(){
+  const avail=emptyIdx(board);
+  if(!avail.length)return -1;
+  if(difficulty==='easy'){
+    // 85% random, 15% smart
+    if(Math.random()<.85)return avail[Math.floor(Math.random()*avail.length)];
+    const wb=findWinOrBlock(board,ai);
+    return wb!==null?wb:avail[Math.floor(Math.random()*avail.length)];
+  }
+  if(difficulty==='medium'){
+    // always take win/block, else 40% best, 60% random
+    const wb=findWinOrBlock(board,ai);
+    if(wb!==null)return wb;
+    if(Math.random()<.4)return bestMove(board.slice(),ai);
+    // prefer center/corners for natural feel
+    const pref=[4,0,2,6,8].filter(i=>!board[i]);
+    if(pref.length&&Math.random()<.6)return pref[Math.floor(Math.random()*pref.length)];
+    return avail[Math.floor(Math.random()*avail.length)];
+  }
+  // hard: optimal, deterministic-ish (center-biased ordering already)
+  // unbeatable: optimal + random tie-break (bestMove already randomizes ties)
+  return bestMove(board.slice(),ai);
+}
+// ---------- core game ----------
+function isHumanTurn(){return mode==='pvp'||(gameActive&&currentPlayer===human)}
+function setStatus(html){statusEl.innerHTML=html}
+function playerName(p){
+  if(mode==='ai')return p===human?'You':'AI';
+  return 'Player '+p;
+}
+function colored(p){return `<span class="${p.toLowerCase()}-color">${p}</span>`}
+function updateTurnUI(){
+  if(!gameActive)return;
+  if(mode==='ai'&&currentPlayer===ai){
+    setStatus(`<span class="thinking"><span class="spinner"></span> AI (${ai}) thinking…</span>`);
+  }else if(mode==='ai'){
+    setStatus(`Your turn — you are ${colored(human)}`);
+  }else{
+    setStatus(`Player ${colored(currentPlayer)}'s Turn`);
+  }
+  xScoreItem.classList.toggle('active',currentPlayer==='X');
+  oScoreItem.classList.toggle('active',currentPlayer==='O');
+}
+function placeMove(i,player){
+  board[i]=player;moveStack.push({i,player});
+  const c=cells[i];
+  c.textContent=player;c.classList.add(player.toLowerCase(),'filled');
+  c.setAttribute('aria-label','Cell '+(i+1)+', '+player);
+}
+function checkResult(){
+  let winLine=null;
+  for(const line of WINS){
+    const [a,b,c]=line;
+    if(board[a]&&board[a]===board[b]&&board[a]===board[c]){winLine=line;break}
+  }
+  if(winLine){
+    gameActive=false;
+    const w=board[winLine[0]];
+    winLine.forEach(i=>cells[i].classList.add('winner'));
+    scores[w]++;roundCount++;
+    if(streak.who===w)streak.n++;else streak={who:w,n:1};
+    updateScores();
+    if(mode==='ai'){
+      if(w===human){setStatus(`🎉 You win! Brilliant play!`);sfx.win();launchConfetti(140);addHistory(`You (${w}) beat the AI (${difficulty}) 🎉`)}
+      else{setStatus(`🤖 AI (${w}) wins — ${difficulty} mode. Try again!`);sfx.lose();addHistory(`AI (${w}) wins [${difficulty}] 🤖`)}
+    }else{
+      setStatus(`🎉 Player ${colored(w)} Wins!`);sfx.win();launchConfetti(140);addHistory(`Player ${w} wins! 🎉`);
+    }
+    save();return true;
+  }
+  if(!board.includes('')){
+    gameActive=false;scores.Draws++;roundCount++;streak={who:null,n:0};
+    updateScores();setStatus(`🤝 It's a Draw!`);sfx.draw();addHistory(`Draw 🤝${mode==='ai'?' vs AI ['+difficulty+']':''}`);
+    save();return true;
+  }
+  currentPlayer=currentPlayer==='X'?'O':'X';
+  updateTurnUI();
+  if(mode==='ai'&&gameActive&&currentPlayer===ai)triggerAi();
+  return false;
+}
+function handleCell(i){
+  if(!gameActive||board[i]||aiThinking)return;
+  if(mode==='ai'&&currentPlayer!==human)return;
+  placeMove(i,currentPlayer);
+  currentPlayer===human&&mode==='ai'?sfx.move():(mode==='pvp'?sfx.move():null);
+  if(mode==='ai'&&currentPlayer===human)sfx.move();
+  checkResult();
+}
+function triggerAi(){
+  aiThinking=true;
+  cells.forEach(c=>c.disabled=false);
+  const delay=difficulty==='easy'?350+Math.random()*300:500+Math.random()*450;
+  setTimeout(()=>{
+    aiThinking=false;
+    if(!gameActive)return;
+    const m=pickAiMove();
+    if(m>=0){placeMove(m,ai);sfx.ai();checkResult()}
+  },delay);
+}
+function updateScores(){
+  xScoreEl.textContent=scores.X;oScoreEl.textContent=scores.O;drawScoreEl.textContent=scores.Draws;
+  roundNumEl.textContent=roundCount+1;
+  streakNumEl.textContent=streak.n;
+  streakLbl.textContent=streak.who?((mode==='ai'?(streak.who===human?'You':'AI'):streak.who)+' streak'):'Streak';
+  const played=scores.X+scores.O;
+  winRateEl.textContent=played?Math.round(scores.X/played*100)+'%':'–';
+  if(mode==='ai'){xLabel.textContent=human==='X'?'You (X)':'AI (X)';oLabel.textContent=human==='O'?'You (O)':'AI (O)'}
+  else{xLabel.textContent='Player X';oLabel.textContent='Player O'}
+}
+function addHistory(msg){
+  const ph=historyLog.querySelector('.no-history');if(ph)ph.remove();
+  const d=document.createElement('div');d.className='history-entry';
+  d.innerHTML=`<span class="round-num">#${roundCount}</span> ${msg}`;
+  historyLog.prepend(d);
+  while(historyLog.children.length>30)historyLog.lastChild.remove();
+}
+function startNewGame(){
+  gameActive=true;aiThinking=false;
+  board=['','','','','','','','',''];moveStack=[];
+  if(alternateStarter&&roundCount>0)roundStarter=roundStarter==='X'?'O':'X';
+  else if(roundCount===0)roundStarter=(mode==='ai'?human:'X');
+  currentPlayer=roundStarter;
+  cells.forEach((c,i)=>{c.textContent='';c.classList.remove('x','o','winner','filled','hint-pulse','ghost-x','ghost-o');c.disabled=false;c.setAttribute('aria-label','Cell '+(i+1))});
+  updateTurnUI();updateScores();
+  if(mode==='ai'&&currentPlayer===ai)triggerAi();
+}
+function resetAll(){
+  scores={X:0,O:0,Draws:0};roundCount=0;streak={who:null,n:0};roundStarter=(mode==='ai'?human:'X');
+  historyLog.innerHTML='<p class="no-history">No games played yet.</p>';
+  startNewGame();save();
+}
+function undo(){
+  if(aiThinking||!moveStack.length)return;
+  if(mode==='ai'){
+    // remove AI + human moves (up to 2) so it's human's turn again
+    let n=(currentPlayer===human)?2:1;
+    // if game over, allow undo to resume
+    if(!gameActive){gameActive=true;cells.forEach(c=>c.classList.remove('winner'))}
+    while(n-->0&&moveStack.length){
+      const last=moveStack.pop();
+      // never undo past round start weirdness: stop if we'd remove opponent's earlier round — stack is per-round so fine
+      board[last.i]='';const c=cells[last.i];
+      c.textContent='';c.classList.remove('x','o','filled','winner');c.setAttribute('aria-label','Cell '+(last.i+1));
+      currentPlayer=last.player; // turn goes back to earliest undone
+    }
+    // after undo in AI mode ensure it's human's turn
+    if(moveStack.length===0)currentPlayer=roundStarter;
+    else if(currentPlayer===ai&&board.includes('')){ // edge: AI to move — step one more so human plays
+      if(moveStack.length){const l=moveStack.pop();board[l.i]='';cells[l.i].textContent='';cells[l.i].classList.remove('x','o','filled','winner');currentPlayer=l.player}
+    }
+    if(currentPlayer!==human)currentPlayer=human;
+  }else{
+    if(!gameActive){gameActive=true;cells.forEach(c=>c.classList.remove('winner'))}
+    const last=moveStack.pop();
+    board[last.i]='';cells[last.i].textContent='';cells[last.i].classList.remove('x','o','filled','winner');
+    currentPlayer=last.player;
+  }
+  sfx.click();updateTurnUI();
+}
+function hint(){
+  if(!gameActive||aiThinking)return;
+  const me=mode==='ai'?human:currentPlayer;
+  const b=board.slice();
+  let m=findWinOrBlock(b,me);
+  if(m===null||m===undefined)m=bestMove(b,me);
+  if(m===undefined||m<0||board[m])return;
+  cells[m].classList.add('hint-pulse');
+  setTimeout(()=>cells[m].classList.remove('hint-pulse'),2300);
+  sfx.click();
+}
+// ---------- events ----------
+cells.forEach((c,i)=>{
+  c.addEventListener('click',()=>handleCell(i));
+  c.addEventListener('mouseenter',()=>{
+    if(!gameActive||board[i]||aiThinking)return;
+    if(mode==='ai'&&currentPlayer!==human)return;
+    c.classList.add(currentPlayer==='X'?'ghost-x':'ghost-o');
+  });
+  c.addEventListener('mouseleave',()=>c.classList.remove('ghost-x','ghost-o'));
+});
+$('newGameBtn').addEventListener('click',()=>{sfx.click();startNewGame()});
+$('resetAllBtn').addEventListener('click',()=>{sfx.click();resetAll()});
+$('undoBtn').addEventListener('click',undo);
+$('hintBtn').addEventListener('click',hint);
+$('clearHistory').addEventListener('click',()=>{historyLog.innerHTML='<p class="no-history">No games played yet.</p>';save()});
+$('soundBtn').addEventListener('click',e=>{soundOn=!soundOn;e.target.textContent=soundOn?'🔊 Sound: On':'🔇 Sound: Off';if(soundOn)sfx.click();save()});
+$('themeBtn').addEventListener('click',()=>{document.body.classList.toggle('light');sfx.click()});
+$('pvpTab').addEventListener('click',()=>setMode('pvp'));
+$('aiTab').addEventListener('click',()=>setMode('ai'));
+$('diffSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  difficulty=b.dataset.diff;
+  [...$('diffSeg').children].forEach(x=>x.classList.toggle('active',x===b));
+  sfx.click();save();
+  if(mode==='ai')startNewGame();
+});
+$('sideSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  human=b.dataset.side;ai=human==='X'?'O':'X';
+  [...$('sideSeg').children].forEach(x=>x.classList.toggle('active',x===b));
+  sfx.click();save();startNewGame();
+});
+$('altToggle').addEventListener('change',e=>{alternateStarter=e.target.checked;save()});
+function setMode(m){
+  mode=m;
+  $('pvpTab').classList.toggle('active',m==='pvp');
+  $('aiTab').classList.toggle('active',m==='ai');
+  $('aiSettings').style.display=m==='ai'?'flex':'none';
+  roundStarter=(m==='ai'?human:'X');
+  sfx.click();save();startNewGame();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='9'){const i=+e.key-1;cells[i].focus();handleCell(i)}
+  else if(e.key==='u'||e.key==='U')undo();
+  else if(e.key==='h'||e.key==='H')hint();
+  else if(e.key==='n'||e.key==='N')startNewGame();
+});
+// ---------- PWA install ----------
+let deferredPrompt=null, swState='pending', manifestState='pending';
+const installBtn=$('installBtn'), installBtnToolbar=$('installBtnToolbar');
+const installHelp=$('installHelp'), installSteps=$('installSteps'), installDiagList=$('installDiagList');
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent||'');
+const isStandalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true||new URLSearchParams(location.search).get('installed')==='1';
+function refreshInstallUI(){
+  if(isStandalone){
+    installBtn.textContent='✓ Installed — play anytime!';
+    installBtn.classList.add('show','installed');
+    installBtnToolbar.hidden=true;
+  }else if(deferredPrompt){
+    installBtn.textContent='⬇ Install App';
+    installBtn.classList.add('show');installBtn.classList.remove('installed');
+    installBtnToolbar.hidden=false;
+  }else if(isIOS){
+    // iOS has no beforeinstallprompt — still show button with manual steps
+    installBtn.textContent='⬇ Install App';
+    installBtn.classList.add('show');installBtn.classList.remove('installed');
+    installBtnToolbar.hidden=false;
+  }else{
+    // Chrome etc. before prompt arrives, or file:// with no SW: show with fallback help
+    installBtn.textContent='⬇ Install App';
+    installBtn.classList.add('show');installBtn.classList.remove('installed');
+    installBtnToolbar.hidden=true;
+  }
+}
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();deferredPrompt=e;refreshInstallUI();
+});
+window.addEventListener('appinstalled',()=>{
+  deferredPrompt=null;
+  installBtn.textContent='✓ Installed — play anytime!';
+  installBtn.classList.add('show','installed');
+  installBtnToolbar.hidden=true;
+});
+function renderDiag(){
+  if(!installDiagList)return;
+  const rows=[
+    ['Page URL', location.protocol==='file:' ? 'file:// — browsers BLOCK install prompts here' : location.href, location.protocol!=='file:'],
+    ['Service worker', swState, swState.indexOf('active')===0],
+    ['Manifest', manifestState, manifestState.indexOf('ok')===0],
+    ['Install prompt captured', deferredPrompt?'yes — tap Install again for the system dialog':'not yet (interact with the page, then retry)', !!deferredPrompt],
+  ];
+  installDiagList.innerHTML=rows.map(([k,v,ok])=>`<li><b>${k}:</b> <span class="${ok?'ok':'bad'}">${v}</span></li>`).join('')
+    + (location.protocol==='file:'?`<li><b>Fix:</b> run <kbd>python -m http.server</kbd> in this folder, then open <kbd>http://localhost:8000/tic-tac-toe.html</kbd></li>`:'');
+}
+async function checkManifest(){
+  try{
+    const r=await fetch('manifest.webmanifest',{cache:'no-store'});
+    if(!r.ok){manifestState='http '+r.status;return}
+    const m=await r.json();
+    manifestState=(m.icons&&m.icons.length>=2&&m.start_url)?'ok ('+m.icons.length+' icons)':'bad content';
+  }catch(err){manifestState='fetch failed ('+(err&&err.message||err)+')'}
+}
+async function doInstall(){
+  sfx.click();
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const choice=await deferredPrompt.userChoice.catch(()=>null);
+    if(choice&&choice.outcome==='accepted'){deferredPrompt=null;refreshInstallUI()}
+    return;
+  }
+  // Fallback: platform-specific manual steps
+  if(isIOS){
+    installSteps.innerHTML='<li>Tap the <b>Share</b> button in Safari.</li><li>Scroll and tap <b>Add to Home Screen</b> → <b>Add</b>.</li>';
+  }else if(/android/i.test(navigator.userAgent||'')){
+    installSteps.innerHTML='<li>Open the browser menu (<b>⋮</b>).</li><li>Tap <b>Add to Home screen</b> / <b>Install app</b>.</li><li class="meta">Tip: serve over <kbd>https</kbd> or <kbd>localhost</kbd> for the automatic prompt.</li>';
+  }else{
+    installSteps.innerHTML='<li>Open the browser menu (<b>⋮</b> / <b>…</b>).</li><li>Choose <b>Install Tic Tac Toe</b> / <b>Add to Home screen</b>.</li><li>Or in the address bar, click the <b>install ⊞</b> icon.</li>';
+  }
+  renderDiag();
+  installHelp.classList.add('show');
+}
+installBtn.addEventListener('click',doInstall);
+installBtnToolbar.addEventListener('click',doInstall);
+$('installHelpClose').addEventListener('click',()=>installHelp.classList.remove('show'));
+installHelp.addEventListener('click',(e)=>{if(e.target===installHelp)installHelp.classList.remove('show')});
+if(location.protocol==='file:'){swState='skipped (file:// — needs http)';manifestState='skipped (file:// — needs http)'}
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  swState='registering…';
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then((reg)=>{swState='active ('+(reg.scope||'scoped')+')';checkManifest().then(refreshInstallUI)})
+      .catch((err)=>{swState='failed ('+((err&&err.message)||err)+')';checkManifest().then(refreshInstallUI)});
+  });
+}else if(!('serviceWorker' in navigator)){swState='unsupported browser';checkManifest()}
+// ---------- init ----------
+load();
+$('soundBtn').textContent=soundOn?'🔊 Sound: On':'🔇 Sound: Off';
+$('altToggle').checked=alternateStarter;
+[...$('diffSeg').children].forEach(x=>x.classList.toggle('active',x.dataset.diff===difficulty));
+[...$('sideSeg').children].forEach(x=>x.classList.toggle('active',x.dataset.side===human));
+$('pvpTab').classList.toggle('active',mode==='pvp');
+$('aiTab').classList.toggle('active',mode==='ai');
+$('aiSettings').style.display=mode==='ai'?'flex':'none';
+roundStarter=(mode==='ai'?human:'X');currentPlayer=roundStarter;
+updateScores();updateTurnUI();refreshInstallUI();
+if(mode==='ai'&&currentPlayer===ai)triggerAi();
+})();
+</script>
+</body>
+</html>

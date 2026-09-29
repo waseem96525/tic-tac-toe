@@ -1,0 +1,32 @@
+{
+  "name": "Tic Tac Toe — vs Friend or AI",
+  "short_name": "TicTacToe",
+  "description": "Challenge a friend or take on the unbeatable AI. Works offline.",
+  "start_url": "tic-tac-toe.html?installed=1",
+  "id": "./tic-tac-toe.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16213e",
+  "theme_color": "#16213e",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
